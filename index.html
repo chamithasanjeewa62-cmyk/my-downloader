@@ -1,65 +1,51 @@
+/* Video URL input validation - CONNECTED TO VERCEL BACKEND */
+const form=document.getElementById("downloadForm");
+const input=document.getElementById("videoUrl");
+const message=document.getElementById("message");
+const btn = document.querySelector('.analyze-btn');
 
-<!DOCTYPE html>
-<html lang="en">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>All Video Downloader - No Watermark</title>
-<script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-black text-white min-h-screen flex items-center justify-center p-4">
-  <div class="w-full max-w-xl bg-zinc-900 p-6 rounded-2xl border border-zinc-800">
-    <h1 class="text-2xl font-bold text-center mb-2">Premium Downloader 🔥</h1>
-    <p class="text-center text-zinc-400 text-sm mb-6">TikTok, FB, Insta, YouTube - No Watermark</p>
+form.addEventListener("submit",async function(e){
+    e.preventDefault();
+    const value=input.value.trim();
     
-    <div class="flex gap-2">
-      <input id="urlInput" type="text" placeholder="Video Link එක Paste කරන්න..." class="flex-1 bg-zinc-800 border border-zinc-700 rounded-xl px-4 py-3 outline-none focus:border-white">
-      <button id="downBtn" class="bg-white text-black font-bold px-6 rounded-xl">DOWNLOAD</button>
-    </div>
-    
-    <div id="result" class="mt-6 hidden">
-      <p class="text-sm text-zinc-400">Result:</p>
-      <a id="videoLink" href="#" target="_blank" class="block mt-2 bg-green-500 text-black text-center font-bold py-3 rounded-xl">Video එක Open කරන්න / Save කරන්න</a>
-    </div>
-  </div>
-
-<script>
-const btn = document.getElementById('downBtn');
-const input = document.getElementById('urlInput');
-const resultDiv = document.getElementById('result');
-const videoLink = document.getElementById('videoLink');
-
-btn.onclick = async () => {
-  const value = input.value.trim();
-  if(!value) return alert('Link එක දාන්න!');
-  
-  btn.innerText = 'LOADING...';
-  btn.disabled = true;
-  
-  try {
-    // මේක තමයි ඔයාගේ Vercel API එක
-    const res = await fetch('/api/download', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ url: value })
-    });
-    const data = await res.json();
-    console.log(data);
-    
-    if(data.url){
-      resultDiv.classList.remove('hidden');
-      videoLink.href = data.url;
-      btn.innerText = 'DOWNLOAD';
-    } else {
-      alert('Error: ' + JSON.stringify(data));
-      btn.innerText = 'DOWNLOAD';
+    try{
+        const url=new URL(value);
+        if(url.protocol!=="https:" && url.protocol!=="http:") throw new Error("Invalid");
+    }catch{
+        message.classList.add("show");
+        message.textContent="Please enter a valid link beginning with https://";
+        return;
     }
-  } catch(e){
-    alert('Failed: ' + e.message);
-    btn.innerText = 'DOWNLOAD';
-  }
-  btn.disabled = false;
-}
-</script>
-</body>
-</html>
+
+    // Loading state
+    const oldText = btn.innerHTML;
+    btn.innerHTML = "Processing... ⏳";
+    btn.disabled = true;
+    message.classList.add("show");
+    message.innerHTML="<strong>⏳ Analyzing...</strong><br>Connecting to download server...";
+
+    try{
+        const res = await fetch('/api/download', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url: value })
+        });
+        const data = await res.json();
+        console.log(data);
+
+        if(data.url){
+            message.innerHTML = `
+                <strong style="color:#4ade80">✓ Ready to Download!</strong><br><br>
+                <a href="${data.url}" target="_blank" style="display:block;text-align:center;padding:14px;background:linear-gradient(110deg,#9333ea,#6366f1);color:white;border-radius:10px;text-decoration:none;font-weight:800;margin-top:10px;">DOWNLOAD VIDEO - No Watermark 🔥</a>
+                <br><small style="color:#9698b5">If not downloading, long press and Save Link</small>
+            `;
+        } else {
+            message.innerHTML = `<strong style="color:#ff6b6b">Error</strong><br>${JSON.stringify(data)}`;
+        }
+    }catch(err){
+        message.innerHTML = `<strong style="color:#ff6b6b">Failed</strong><br>${err.message}`;
+    }
+    
+    btn.innerHTML = oldText;
+    btn.disabled = false;
+});
